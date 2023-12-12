@@ -1,0 +1,108 @@
+---
+title: "AS Project"
+author: "Wesenfeld Woźnica"
+date: "2023-12-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data loading and imputation
+We used class-wise averages (missing values excluded) to replace the missing values
+
+```{r loadimpute}
+impute <- function(df) 
+{
+  temps <- list()
+  for (cat in c(0, 1, 2, 3))
+  {
+    temp <- df[df["Category"]==cat,]
+    means <- colMeans(temp, na.rm = T)
+    
+    for (col in colnames(temp))
+    {
+      mis_id <- which(is.na(temp[col]))
+      if (length(mis_id) != 0)
+      {
+        temp[mis_id,col] <- means[col]
+      }
+    }
+    temps[[as.character(cat)]] <- temp
+  }
+  return(temps)
+}
+
+hcv <- read.csv("data.csv")
+temps <- impute(hcv)
+
+hcv <- rbind(temps[['0']], temps[['1']], temps[['2']], temps[['3']])
+```
+# Boxplots for each class
+
+```{r boxplots}
+par(mfrow = c(2, 2))
+for (i in c('0', '1', '2', '3'))
+{
+  boxplot(temps[[i]])
+  title(switch(i, '0' = "Blood Donor",
+                  '1' = "Hepatitis",
+                  '2' = "Fibrosis",
+                  '3' = "Cirrhosis"))
+}
+```
+
+```{r descriptives}
+bdescriptives <- summary(hcv)
+```
+
+# Q-Q plots
+```{r qqplots}
+norm_set_testing <- hcv[,-c(2,13)]
+
+par(mfrow=c(3,4))
+
+for (col in colnames(norm_set_testing))
+{
+  qqnorm(unlist(norm_set_testing[col]), main = col)
+}
+```
+
+# Shapiro-Wilk tests
+$H_0 \rightarrow $ sample belongs to the normal distribution
+$H_a \rightarrow $ not $H_0$
+
+```{r ben}
+bens <- lapply(norm_set_testing, shapiro.test)
+
+for (i in bens)
+{
+  print(i$p.value)
+}
+```
+
+No samples belong to the normal distribution
+
+Since we have more than 2 groups, that do not belong to the normal distribution we will perform Kruskal-Wallis test
+
+# Kruskal-Wallis
+
+$H_0 \rightarrow $ sample medians originate from the same distribution
+$H_a \rightarrow $ not $H_0$
+
+```{r kruskal}
+kruskal <- kruskal.test(norm_set_testing)
+kruskal
+```
+
+We reject the null hypothesis, medians of the samples do not belong to the same distribution.
+
+# Conover test
+
+```{r conover}
+library(conover.test)
+
+conover.test(norm_set_testing)
+```
+
