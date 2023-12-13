@@ -37,17 +37,6 @@ temps <- split_by_class(hcv)
 # Boxplots for each class
 
 ```{r boxplots}
-par(mfrow = c(2, 2))
-for (i in c('0', '1', '2', '3'))
-{
-  boxplot(temps[[i]])
-  title(switch(i, '0' = "Blood Donor",
-                  '1' = "Hepatitis",
-                  '2' = "Fibrosis",
-                  '3' = "Cirrhosis"))
-}
-```
-```{r}
 
 names = colnames(hcv)
 names = names[-c(2,13)]
@@ -63,10 +52,33 @@ for (i in names)
   boxplot(t(mat), names = diagnosis)
   title(i)
 }
-
-
 ```
 
+```{r countoutliers}
+FindOutliers <- function(data) {
+  lowerq = quantile(data)[2]
+  upperq = quantile(data)[4]
+  iqr = upperq - lowerq
+  extreme.threshold.upper = (iqr * 1.5) + upperq
+  extreme.threshold.lower = lowerq - (iqr * 1.5)
+  result <- data > extreme.threshold.upper | data < extreme.threshold.lower
+  return(sum(result))
+}
+
+out_count <- matrix(nrow = 4, ncol = 11)
+colnames(out_count) <- colnames(hcv)[-c(2,13)]
+rownames(out_count) <- names(temps)
+
+for (cl in rownames(out_count))
+{
+  for (i in colnames(out_count))
+  {
+    out_count[cl, i] <- FindOutliers(unlist(temps[[cl]][i]))
+  }
+}
+rownames(out_count) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+out_count
+```
 
 ```{r descriptives}
 bdescriptives <- summary(hcv)
