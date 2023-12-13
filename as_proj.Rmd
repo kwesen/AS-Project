@@ -10,35 +10,30 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Data loading and imputation
-We used class-wise averages (missing values excluded) to replace the missing values
+We used kNN imputation with 18 neighbors.
+
+The class distribution is extremely unbalanced, with 3 out of 4 classes having only about 22 instances each.
 
 ```{r loadimpute}
-impute <- function(df) 
+split_by_class <- function(df)
 {
   temps <- list()
   for (cat in c(0, 1, 2, 3))
   {
-    temp <- df[df["Category"]==cat,]
-    means <- colMeans(temp, na.rm = T)
-    
-    for (col in colnames(temp))
-    {
-      mis_id <- which(is.na(temp[col]))
-      if (length(mis_id) != 0)
-      {
-        temp[mis_id,col] <- means[col]
-      }
-    }
-    temps[[as.character(cat)]] <- temp
+    tdf <- df[df["Category"]==cat,]
+    temps[[as.character(cat)]] <- tdf
   }
   return(temps)
 }
 
 hcv <- read.csv("data.csv")
-temps <- impute(hcv)
+hcv$Category <- as.factor(hcv$Category)
+hcv$Sex <- as.factor(hcv$Sex)
+hcv <- multiUS::KNNimp(hcv, k=18) # imputing using k-nearest neighbors
 
-hcv <- rbind(temps[['0']], temps[['1']], temps[['2']], temps[['3']])
+temps <- split_by_class(hcv)
 ```
+
 # Boxplots for each class
 
 ```{r boxplots}
@@ -55,32 +50,58 @@ for (i in c('0', '1', '2', '3'))
 
 ```{r descriptives}
 bdescriptives <- summary(hcv)
+bdescriptives
 ```
 
 # Q-Q plots
 ```{r qqplots}
-norm_set_testing <- hcv[,-c(2,13)]
-
-par(mfrow=c(3,4))
-
-for (col in colnames(norm_set_testing))
+for (cl in temps)
 {
-  qqnorm(unlist(norm_set_testing[col]), main = col)
+  par(mfrow=c(3,4))
+
+  for (col in colnames(cl[,-c(2,13)]))
+  {
+    qqnorm(unlist(cl[col]), main = col)
+  }
+  mtext(switch(as.character(cl$Category[1]), '0' = "Blood Donor",
+                  '1' = "Hepatitis",
+                  '2' = "Fibrosis",
+                  '3' = "Cirrhosis"), side = 3, line = -1.5, outer = T)
 }
 ```
 
 # Shapiro-Wilk tests
-$H_0 \rightarrow $ sample belongs to the normal distribution
-$H_a \rightarrow $ not $H_0$
+$H_0 \rightarrow$ sample belongs to the normal distribution
+
+$H_a \rightarrow$ not $H_0$
 
 ```{r ben}
-bens <- lapply(norm_set_testing, shapiro.test)
-
-for (i in bens)
+shapiros <- matrix(nrow = 11, ncol = 4)
+colnames(shapiros) <- names(temps)
+for (cl in temps)
 {
-  print(i$p.value)
+  bens <- lapply(cl[,-c(2,13)], shapiro.test)
+  
+  shapiros[,cl$Category[1]] <- sapply(bens, "[[","p.value")
 }
+colnames(shapiros) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+rownames(shapiros) <- colnames(hcv)[-c(2,13)]
+shapiros <- as.data.frame(shapiros)
 ```
+
+|      | Blood Donor  | Hepatitis    | Fibrosis     | Cirrhosis    |
+|------|--------------|--------------|--------------|--------------|
+|  Age | 1.312100e-08 | 7.125890e-01 | 0.9164536648 | 3.355084e-01 |
+|  ALB | 2.899003e-14 | 6.398283e-01 | 0.3901453349 | 7.813236e-01 |
+|  ALP | 2.691650e-07 | 4.685328e-04 | 0.1040438974 | 2.764596e-07 |
+|  AST | 1.735090e-32 | 1.104465e-05 | 0.0285155286 | 4.567809e-04 |
+|  BIL | 1.855860e-28 | 2.790052e-06 | 0.0258700855 | 2.868214e-06 |
+|  CHE | 1.321403e-04 | 6.882919e-02 | 0.6766515214 | 3.111820e-03 |
+| CHOL | 4.303689e-05 | 4.017470e-02 | 0.9328198708 | 3.973487e-01 |
+| CREA | 7.923410e-05 | 3.295570e-04 | 0.0553331247 | 1.202464e-09 |
+|  CGT | 2.102444e-30 | 1.234150e-06 | 0.0536414478 | 1.457298e-06 |
+| PROT | 1.386594e-06 | 2.947508e-01 | 0.4215206563 | 3.672550e-01 |
+|  ALT | 9.587215e-24 | 1.999425e-03 | 0.0005973611 | 1.773283e-07 |
 
 No samples belong to the normal distribution
 
@@ -88,11 +109,12 @@ Since we have more than 2 groups, that do not belong to the normal distribution 
 
 # Kruskal-Wallis
 
-$H_0 \rightarrow $ sample medians originate from the same distribution
-$H_a \rightarrow $ not $H_0$
+$H_0 \rightarrow$ sample medians originate from the same distribution
+
+$H_a \rightarrow$ not $H_0$
 
 ```{r kruskal}
-kruskal <- kruskal.test(norm_set_testing)
+kruskal <- kruskal.test(hcv[,-c(2,13)])
 kruskal
 ```
 
@@ -103,6 +125,26 @@ We reject the null hypothesis, medians of the samples do not belong to the same 
 ```{r conover}
 library(conover.test)
 
-conover.test(norm_set_testing)
+con <- conover.test(hcv[,-c(2,13)])
 ```
+
+We accept $H_0$ for pairs 9-4 5-6
+
+Reject it for the rest 
+
+```{r pca}
+library(stats)
+library(ggplot2)
+library(ggfortify)
+
+pca_set <- hcv
+levels(pca_set$Category) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+pca_set$Sex <- as.numeric(pca_set$Sex)
+
+comps <- prcomp(pca_set[,-13], scale. = T)
+
+autoplot(comps, data = pca_set, colour = "Category", loadings = F)
+```
+
+Cirrhosis class can be partitioned from the Donors using the shown components with likely a decent accuracy. Fibrosis may be possible but hepatitis can be tough.
 
