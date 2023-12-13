@@ -37,10 +37,10 @@ temps <- split_by_class(hcv)
 # Boxplots for each class
 
 ```{r boxplots}
-
 names = colnames(hcv)
 names = names[-c(2,13)]
-
+# 
+# par(mfrow=c(3,4))
 for (i in names)
 {
   age = c(Group = c(0, 1, 2, 3) ,Age = c(unlist(temps[[1]][i]), 
@@ -49,6 +49,7 @@ for (i in names)
                                          unlist(temps[[4]][i])))
   mat <-matrix(age, nrow = 4, byrow = T)
   diagnosis = c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+  # diagnosis = names(temps)
   boxplot(t(mat), names = diagnosis)
   title(i)
 }
@@ -81,7 +82,12 @@ out_count
 ```
 
 ```{r descriptives}
-bdescriptives <- summary(hcv)
+bdescriptives <- list()
+for (cl in names(temps))
+{
+  bdescriptives[[cl]] <- summary(temps[[cl]][,-13])
+}
+bdescriptives$cat <- summary(hcv)
 bdescriptives
 ```
 
@@ -135,18 +141,23 @@ shapiros <- as.data.frame(shapiros)
 | PROT | 1.386594e-06 | 2.947508e-01 | 0.4215206563 | 3.672550e-01 |
 |  ALT | 9.587215e-24 | 1.999425e-03 | 0.0005973611 | 1.773283e-07 |
 
-No samples belong to the normal distribution
+Some samples from the Fibrosis class 
 
 Since we have more than 2 groups, that do not belong to the normal distribution we will perform Kruskal-Wallis test
 
 # Kruskal-Wallis
 
-$H_0 \rightarrow$ sample medians originate from the same distribution
+$H_0 \rightarrow$ mean ranks of the groups are the same
 
 $H_a \rightarrow$ not $H_0$
 
 ```{r kruskal}
-kruskal <- kruskal.test(hcv[,-c(2,13)])
+kruskal <- list()
+for (cl in names(temps))
+{
+  kruskal[[cl]] <- kruskal.test(temps[[cl]][,-c(2,13)])
+}
+
 kruskal
 ```
 
@@ -156,8 +167,11 @@ We reject the null hypothesis, medians of the samples do not belong to the same 
 
 ```{r conover}
 library(conover.test)
-
-con <- conover.test(hcv[,-c(2,13)])
+con <- list()
+for (cl in names(temps))
+{
+  con[[cl]] <- conover.test(temps[[cl]][,-c(2,13)])
+}
 ```
 
 We accept $H_0$ for pairs 9-4 5-6
