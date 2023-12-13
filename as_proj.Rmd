@@ -47,6 +47,26 @@ for (i in c('0', '1', '2', '3'))
                   '3' = "Cirrhosis"))
 }
 ```
+```{r}
+
+names = colnames(hcv)
+names = names[-c(2,13)]
+
+for (i in names)
+{
+  age = c(Group = c(0, 1, 2, 3) ,Age = c(unlist(temps[[1]][i]), 
+                                         unlist(temps[[2]][i]), 
+                                         unlist(temps[[3]][i]), 
+                                         unlist(temps[[4]][i])))
+  mat <-matrix(age, nrow = 4, byrow = T)
+  diagnosis = c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+  boxplot(t(mat), names = diagnosis)
+  title(i)
+}
+
+
+```
+
 
 ```{r descriptives}
 bdescriptives <- summary(hcv)
