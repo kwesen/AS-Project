@@ -194,3 +194,36 @@ autoplot(comps, data = pca_set, colour = "Category", loadings = F)
 
 Cirrhosis class can be partitioned from the Donors using the shown components with likely a decent accuracy. Fibrosis may be possible but hepatitis can be tough.
 
+
+```{r extracting_conover_results}
+extract <- function(string)
+{
+  match <- unlist(stringr::str_extract_all(string,"\\d+"))
+}
+make_matrix <- function(conover.result, matches)
+{
+  tmp_mat <- matrix(nrow = 10, ncol = 10)
+  colnames(tmp_mat) <- as.character(1:10)
+  rownames(tmp_mat) <- as.character(2:11)
+  
+  for (i in 1:dim(matches)[2])
+  {
+    col_id <- matches[1,i]
+    row_id <- matches[2,i]
+    tmp_mat[row_id, col_id] <- conover.result$P.adjusted[i]
+  }
+  return(as.data.frame(tmp_mat))
+}
+
+make_matrix.list <- function(conover.result.list)
+{
+  test.cases <- conover.result.list[["0"]]$comparisons
+  matches <- sapply(test.cases, extract)
+  conover_processed <- lapply(conover.result.list, make_matrix, matches)
+  return(conover_processed)
+}
+
+conover_processed <- make_matrix.list(con)
+print(conover_processed)
+```
+
