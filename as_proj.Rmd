@@ -229,8 +229,8 @@ print(conover_processed)
 ```
 
 ```{r}
-ggplot(conover_processed[["0"]], aes(x = colnames(hcv)[-c(2,13)], y=colnames(hcv)[-c(1,2,13)]))+
-  geom_tile()
+# ggplot(conover_processed[["0"]], aes(x = colnames(hcv)[-c(2,13)], y=colnames(hcv)[-c(1,2,13)]))+
+#   geom_tile()
 ```
 
 
@@ -243,15 +243,40 @@ for (cl in names(temps))
 {
   correl = round(cor(temps[[cl]][,-c(2,13)], method = "spearman"), 4)
   suppressWarnings({pcor = cor_pmat(temps[[cl]][,-c(2,13)], method = "spearman")})
-  # plot(ggcorrplot(correl,  type = "lower", lab = F, title = diagnosis[as.numeric(cl)+1], p.mat = pcor)) # stupid but it wouldn't work otherwise
+  # plot(ggcorrplot(correl,  type = "lower", lab = F, title = diagnosis[as.numeric(cl)+1], p.mat = pcor)) # stupid but it wouldn't work otherwise | not longer needed but i will leave it as reminder of this stupid bugfix
   plots[[cl]] = ggcorrplot(correl,  type = "lower", lab = F, title = diagnosis[as.numeric(cl)+1], p.mat = pcor)
 }
-plot = rbind(plots)
 grid.arrange(grobs = plots, ncol = 2, nrow =2)
 ```
 
-```{r}
+```{r conover_effect_size}
 library(effsize)
-cliff.delta(temps[["0"]]$Age,temps[["0"]]$ALT)
+cliff.delta.for_conover <- function(temp_mat){
+  temp_mat <- temp_mat[sapply(temp_mat, is.numeric)] # remove non numeric columns
+  max_iter <- ncol(temp_mat)-1
+  temp_mat_out <- as.data.frame(matrix(nrow = max_iter, ncol = max_iter))
+  
+  row_names <- colnames(temp_mat)[-1]
+  column_names <- colnames(temp_mat)[-11]
+  
+  rownames(temp_mat_out) <- row_names
+  colnames(temp_mat_out) <- column_names
+  
+  # this caused warnings "The samples are fully disjoint, using approximate Confidence Interval estimation"
+  # for some samples. Maybe it's a bad approach but makes it easier to look at
+  suppressWarnings({ 
+    for (i in 1:max_iter)
+    {
+      col_item_name <- column_names[i]
+      for (j in i:max_iter)
+      {
+        row_item_name <- row_names[j]
+        temp_mat_out[j,i] <- cliff.delta(temp_mat[,row_item_name], temp_mat[,col_item_name])$estimate
+      }
+    }
+  })
+  return(temp_mat_out)
+}
+conover.effect_size <- lapply(temps, cliff.delta.for_conover)
 ```
 
