@@ -170,7 +170,7 @@ library(conover.test)
 con <- list()
 for (cl in names(temps))
 {
-  con[[cl]] <- conover.test(temps[[cl]][,-c(2,13)])
+  con[[cl]] <- conover.test(temps[[cl]][,-c(2,13)], method = "holm")
 }
 ```
 
@@ -203,6 +203,7 @@ extract <- function(string)
 make_matrix <- function(conover.result, matches)
 {
   tmp_mat <- matrix(nrow = 10, ncol = 10)
+  # tmp_mat[,] <- 0
   colnames(tmp_mat) <- as.character(1:10)
   rownames(tmp_mat) <- as.character(2:11)
   
@@ -225,5 +226,32 @@ make_matrix.list <- function(conover.result.list)
 
 conover_processed <- make_matrix.list(con)
 print(conover_processed)
+```
+
+```{r}
+ggplot(conover_processed[["0"]], aes(x = colnames(hcv)[-c(2,13)], y=colnames(hcv)[-c(1,2,13)]))+
+  geom_tile()
+```
+
+
+```{r corelograms}
+library(ggcorrplot)
+library(gridExtra)
+plots = list()
+
+for (cl in names(temps))
+{
+  correl = round(cor(temps[[cl]][,-c(2,13)], method = "spearman"), 4)
+  suppressWarnings({pcor = cor_pmat(temps[[cl]][,-c(2,13)], method = "spearman")})
+  # plot(ggcorrplot(correl,  type = "lower", lab = F, title = diagnosis[as.numeric(cl)+1], p.mat = pcor)) # stupid but it wouldn't work otherwise
+  plots[[cl]] = ggcorrplot(correl,  type = "lower", lab = F, title = diagnosis[as.numeric(cl)+1], p.mat = pcor)
+}
+plot = rbind(plots)
+grid.arrange(grobs = plots, ncol = 2, nrow =2)
+```
+
+```{r}
+library(effsize)
+cliff.delta(temps[["0"]]$Age,temps[["0"]]$ALT)
 ```
 
