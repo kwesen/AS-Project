@@ -296,3 +296,44 @@ conover.effect_size <- lapply(temps, cliff.delta.for_conover)
 conover.effect_size
 ```
 
+```{r}
+
+groups <- list()
+for (cl in names(temps))
+{
+  groups[[cl]] = temps[[cl]][sapply(temps[[cl]], is.numeric)]
+}
+eta.sqr = c()
+for ( i in 1:ncol(groups[["0"]]))
+{
+  sums = c()
+  counts = c()
+  for(j in 1:length(groups))
+  {
+    sums = c(sums, sum(groups[[j]][,i]))
+    counts = c(counts, nrow(groups[[j]]))
+  }
+  means = sums/counts
+  mean.sqr = c()
+  for(j in 1:length(groups))
+  {
+    mean.sqr = c(mean.sqr, sum((groups[[j]][,i]-means[j])**2))
+  }
+  mean.mean = sum(means)/length(groups)
+  ss.among = c()
+  for(j in 1:length(groups))
+  {
+    ss.among = c(ss.among, counts[j]*((means[j]-mean.mean))**2)
+  }
+  ss.among = sum(ss.among)
+  ss.within = sum(mean.sqr)
+  ss.total = ss.among + ss.within
+  eta.sqr = c(eta.sqr, ss.among/ss.total)
+}
+
+names(eta.sqr) = colnames(groups[["1"]])
+
+print(eta.sqr)
+
+```
+
