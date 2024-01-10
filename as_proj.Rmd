@@ -163,20 +163,7 @@ kruskal
 
 We reject the null hypothesis, medians of the samples do not belong to the same distribution.
 
-# Conover test
-
-```{r conover}
-library(conover.test)
-con <- list()
-for (cl in names(temps))
-{
-  con[[cl]] <- conover.test(temps[[cl]][,-c(2,13)], method = "holm")
-}
-```
-
-We accept $H_0$ for pairs 9-4 5-6
-
-Reject it for the rest 
+# PCA
 
 ```{r pca}
 library(stats)
@@ -191,6 +178,28 @@ comps <- prcomp(pca_set[,-13], scale. = T)
 
 autoplot(comps, data = pca_set, colour = "Category", loadings = F)
 ```
+
+# Conover test
+
+```{r conover holm}
+library(conover.test)
+con.holm <- list()
+for (cl in names(temps))
+{
+  con.holm[[cl]] <- conover.test(temps[[cl]][,-c(2,13)], method = "holm")
+}
+```
+
+```{r conover bonferoni}
+
+con.bonf <- list()
+for (cl in names(temps))
+{
+  con.bonf[[cl]] <- conover.test(temps[[cl]][,-c(2,13)], method = "bonferroni")
+}
+```
+
+
 
 Cirrhosis class can be partitioned from the Donors using the shown components with likely a decent accuracy. Fibrosis may be possible but hepatitis can be tough.
 
@@ -224,9 +233,15 @@ make_matrix.list <- function(conover.result.list)
   return(conover_processed)
 }
 
-conover_processed <- make_matrix.list(con)
-print(conover_processed)
+conover_processed.holm <- make_matrix.list(con.holm)
+conover_processed.bonf <- make_matrix.list(con.bonf)
+conover_processed.holm
 ```
+
+```{r}
+conover_processed.bonf
+```
+
 
 ```{r}
 # ggplot(conover_processed[["0"]], aes(x = colnames(hcv)[-c(2,13)], y=colnames(hcv)[-c(1,2,13)]))+
@@ -278,5 +293,6 @@ cliff.delta.for_conover <- function(temp_mat){
   return(temp_mat_out)
 }
 conover.effect_size <- lapply(temps, cliff.delta.for_conover)
+conover.effect_size
 ```
 
