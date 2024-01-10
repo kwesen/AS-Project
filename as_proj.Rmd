@@ -243,11 +243,25 @@ conover_processed.bonf
 ```
 
 
-```{r}
-# ggplot(conover_processed[["0"]], aes(x = colnames(hcv)[-c(2,13)], y=colnames(hcv)[-c(1,2,13)]))+
-#   geom_tile()
+```{r conover comparison}
+conover.compare <- function(conover_processed, confidence = NULL)
+{
+  if (is.null(confidence)){confidence = 0.05/2}
+  conover.comparison <- list()
+  for (cl in names(conover_processed))
+  {
+    conover.comparison[[cl]] = conover_processed[[cl]] <= confidence
+  }
+  
+  comparison_swap = conover.comparison[[1]]
+  for (cl in names(conover_processed[-1]))
+  {
+    comparison_swap = conover.comparison[[cl]] & comparison_swap
+  }
+return(comparison_swap)
+}
+conover.compare(conover_processed.bonf)
 ```
-
 
 ```{r corelograms}
 library(ggcorrplot)
@@ -286,7 +300,8 @@ cliff.delta.for_conover <- function(temp_mat){
       for (j in i:max_iter)
       {
         row_item_name <- row_names[j]
-        temp_mat_out[j,i] <- cliff.delta(temp_mat[,row_item_name], temp_mat[,col_item_name])$estimate
+        mag <- cliff.delta(temp_mat[,row_item_name], temp_mat[,col_item_name])$magnitude
+        temp_mat_out[j,i] <- as.character(mag)
       }
     }
   })
@@ -296,8 +311,8 @@ conover.effect_size <- lapply(temps, cliff.delta.for_conover)
 conover.effect_size
 ```
 
-```{r}
 
+```{r}
 groups <- list()
 for (cl in names(temps))
 {
@@ -334,8 +349,9 @@ for ( i in 1:ncol(groups[["0"]]))
 names(eta.sqr) = colnames(groups[["1"]])
 
 print(eta.sqr)
-
 ```
+
+
 ```{r}
 eta.table <- data.frame(Value = eta.sqr, Effect_size = character(length(eta.sqr)))
 
@@ -356,7 +372,6 @@ for (i in seq_along(eta.sqr))
     eta.table$Effect_size[i] <- "Large"
   }
 }
-
 ```
 
 
