@@ -353,25 +353,28 @@ print(eta.sqr)
 
 
 ```{r}
-eta.table <- data.frame(Value = eta.sqr, Effect_size = character(length(eta.sqr)))
+eta.table <- data.frame(Effect_size = eta.sqr, Magnitude = character(length(eta.sqr)))
 
 for (i in seq_along(eta.sqr))
 {
   if (eta.sqr[i]<=0.01)
   {
-    eta.table$Effect_size[i] <- "Neglegible"
+    eta.table$Magnitude[i] <- "Neglegible"
   }
   else if (eta.sqr[i]>0.01 && eta.sqr[i] <= 0.06){
-    eta.table$Effect_size[i] <- "Small"
+    eta.table$Magnitude[i] <- "Small"
   }
   else if (eta.sqr[i]>0.06 && eta.sqr[i] <= 0.14){
-    eta.table$Effect_size[i] <- "Medium"
+    eta.table$Magnitude[i] <- "Medium"
   }
   else 
   {
-    eta.table$Effect_size[i] <- "Large"
+    eta.table$Magnitude[i] <- "Large"
   }
 }
 ```
 
+```{r}
+print(eta.table)
+```
 
