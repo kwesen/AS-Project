@@ -388,7 +388,7 @@ for (i in seq_along(eta.sqr))
 {
   if (eta.sqr[i]<=0.01)
   {
-    eta.table$Magnitude[i] <- "Neglegible"
+    eta.table$Magnitude[i] <- "Negligible"
   }
   else if (eta.sqr[i]>0.01 && eta.sqr[i] <= 0.06){
     eta.table$Magnitude[i] <- "Small"
