@@ -124,7 +124,18 @@ for (cl in temps)
 }
 colnames(shapiros) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
 rownames(shapiros) <- colnames(hcv)[-c(2,13)]
+shapiros.adjusted.bonf <- matrix(p.adjust(shapiros, method = "bonferroni"), nrow = nrow(shapiros), ncol = ncol(shapiros))
+colnames(shapiros.adjusted.bonf) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+rownames(shapiros.adjusted.bonf) <- colnames(hcv)[-c(2,13)]
+shapiros.adjusted.bonf <- as.data.frame(shapiros.adjusted.bonf)
+
+shapiros.adjusted.holm <- matrix(p.adjust(shapiros, method = "holm"), nrow = nrow(shapiros), ncol = ncol(shapiros))
+colnames(shapiros.adjusted.holm) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+rownames(shapiros.adjusted.holm) <- colnames(hcv)[-c(2,13)]
+shapiros.adjusted.holm <- as.data.frame(shapiros.adjusted.holm)
+
 shapiros <- as.data.frame(shapiros)
+shapiros.adjusted.bonf
 ```
 
 |      | Blood Donor  | Hepatitis    | Fibrosis     | Cirrhosis    |
@@ -144,6 +155,9 @@ shapiros <- as.data.frame(shapiros)
 Some samples from the Fibrosis class 
 
 Since we have more than 2 groups, that do not belong to the normal distribution we will perform Kruskal-Wallis test
+```{r}
+shapiros.adjusted.holm
+```
 
 # Kruskal-Wallis
 
@@ -180,9 +194,16 @@ autoplot(comps, data = pca_set, colour = "Category", loadings = F)
 ```
 
 # Conover test
+```{r}
+library(conover.test)
+con <- list()
+for (cl in names(temps))
+{
+  con[[cl]] <- conover.test(temps[[cl]][,-c(2,13)])
+}
+```
 
 ```{r conover holm}
-library(conover.test)
 con.holm <- list()
 for (cl in names(temps))
 {
@@ -235,6 +256,7 @@ make_matrix.list <- function(conover.result.list)
 
 conover_processed.holm <- make_matrix.list(con.holm)
 conover_processed.bonf <- make_matrix.list(con.bonf)
+conover_processed.none <- make_matrix.list(con)
 ```
 
 ```{r conover comparison}
@@ -257,11 +279,16 @@ return(as.data.frame(comparison_swap))
 
 conover.compared_bonf <- conover.compare(conover_processed.bonf)
 conover.compared_holm <- conover.compare(conover_processed.holm)
+conover.compared_none <- conover.compare(conover_processed.none)
+
 rownames(conover.compared_bonf) <- names[-1]
 colnames(conover.compared_bonf) <- names[-11]
 
 rownames(conover.compared_holm) <- names[-1]
 colnames(conover.compared_holm) <- names[-11]
+
+rownames(conover.compared_none) <- names[-1]
+colnames(conover.compared_none) <- names[-11]
 
 ```
 
