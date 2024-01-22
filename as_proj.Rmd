@@ -193,104 +193,7 @@ comps <- prcomp(pca_set[,-13], scale. = T)
 autoplot(comps, data = pca_set, colour = "Category", loadings = F)
 ```
 
-# Conover test
-```{r}
-library(conover.test)
-con <- list()
-for (cl in names(temps))
-{
-  con[[cl]] <- conover.test(temps[[cl]][,-c(2,13)])
-}
-```
-
-```{r conover holm}
-con.holm <- list()
-for (cl in names(temps))
-{
-  con.holm[[cl]] <- conover.test(temps[[cl]][,-c(2,13)], method = "holm")
-}
-```
-
-```{r conover bonferoni}
-
-con.bonf <- list()
-for (cl in names(temps))
-{
-  con.bonf[[cl]] <- conover.test(temps[[cl]][,-c(2,13)], method = "bonferroni")
-}
-```
-
-
-
 Cirrhosis class can be partitioned from the Donors using the shown components with likely a decent accuracy. Fibrosis may be possible but hepatitis can be tough.
-
-
-```{r extracting_conover_results}
-extract <- function(string)
-{
-  match <- unlist(stringr::str_extract_all(string,"\\d+"))
-}
-make_matrix <- function(conover.result, matches)
-{
-  tmp_mat <- matrix(nrow = 10, ncol = 10)
-  # tmp_mat[,] <- 0
-  colnames(tmp_mat) <- as.character(1:10)
-  rownames(tmp_mat) <- as.character(2:11)
-  
-  for (i in 1:dim(matches)[2])
-  {
-    col_id <- matches[1,i]
-    row_id <- matches[2,i]
-    tmp_mat[row_id, col_id] <- conover.result$P.adjusted[i]
-  }
-  return(as.data.frame(tmp_mat))
-}
-
-make_matrix.list <- function(conover.result.list)
-{
-  test.cases <- conover.result.list[["0"]]$comparisons
-  matches <- sapply(test.cases, extract)
-  conover_processed <- lapply(conover.result.list, make_matrix, matches)
-  return(conover_processed)
-}
-
-conover_processed.holm <- make_matrix.list(con.holm)
-conover_processed.bonf <- make_matrix.list(con.bonf)
-conover_processed.none <- make_matrix.list(con)
-```
-
-```{r conover comparison}
-conover.compare <- function(conover_processed, confidence = NULL)
-{
-  if (is.null(confidence)){confidence = 0.05/2}
-  conover.comparison <- list()
-  for (cl in names(conover_processed))
-  {
-    conover.comparison[[cl]] = conover_processed[[cl]] <= confidence
-  }
-  
-  comparison_swap = conover.comparison[[1]]
-  for (cl in names(conover_processed[-1]))
-  {
-    comparison_swap = conover.comparison[[cl]] & comparison_swap
-  }
-return(as.data.frame(comparison_swap))
-}
-
-conover.compared_bonf <- conover.compare(conover_processed.bonf)
-conover.compared_holm <- conover.compare(conover_processed.holm)
-conover.compared_none <- conover.compare(conover_processed.none)
-
-rownames(conover.compared_bonf) <- names[-1]
-colnames(conover.compared_bonf) <- names[-11]
-
-rownames(conover.compared_holm) <- names[-1]
-colnames(conover.compared_holm) <- names[-11]
-
-rownames(conover.compared_none) <- names[-1]
-colnames(conover.compared_none) <- names[-11]
-
-```
 
 ```{r corelograms}
 library(ggcorrplot)
@@ -306,40 +209,6 @@ for (cl in names(temps))
 }
 grid.arrange(grobs = plots, ncol = 2, nrow =2)
 ```
-
-```{r conover_effect_size}
-library(effsize)
-cliff.delta.for_conover <- function(temp_mat){
-  temp_mat <- temp_mat[sapply(temp_mat, is.numeric)] # remove non numeric columns
-  max_iter <- ncol(temp_mat)-1
-  temp_mat_out <- as.data.frame(matrix(nrow = max_iter, ncol = max_iter))
-  
-  row_names <- colnames(temp_mat)[-1]
-  column_names <- colnames(temp_mat)[-11]
-  
-  rownames(temp_mat_out) <- row_names
-  colnames(temp_mat_out) <- column_names
-  
-  # this caused warnings "The samples are fully disjoint, using approximate Confidence Interval estimation"
-  # for some samples. Maybe it's a bad approach but makes it easier to look at
-  suppressWarnings({ 
-    for (i in 1:max_iter)
-    {
-      col_item_name <- column_names[i]
-      for (j in i:max_iter)
-      {
-        row_item_name <- row_names[j]
-        mag <- cliff.delta(temp_mat[,row_item_name], temp_mat[,col_item_name])$magnitude
-        temp_mat_out[j,i] <- as.character(mag)
-      }
-    }
-  })
-  return(temp_mat_out)
-}
-conover.effect_size <- lapply(temps, cliff.delta.for_conover)
-conover.effect_size
-```
-
 
 ```{r}
 groups <- list()
@@ -380,7 +249,6 @@ names(eta.sqr) = colnames(groups[["1"]])
 print(eta.sqr)
 ```
 
-
 ```{r}
 eta.table <- data.frame(Effect_size = eta.sqr, Magnitude = character(length(eta.sqr)))
 
@@ -405,5 +273,132 @@ for (i in seq_along(eta.sqr))
 
 ```{r}
 print(eta.table)
+```
+# Conover test
+```{r actually_good_conover}
+library(conover.test)
+prepare_conover_data <- function(temps)
+  {
+  data_for_conover <- list()
+  for (col in colnames(temps[[1]])[sapply(temps[[1]], is.numeric)])
+  {
+    temp_ = lapply(temps, "[[", 1)
+    names(temp_) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
+    data_for_conover[[col]] <- temp_
+  }
+  return(data_for_conover)
+}
+con.data <- prepare_conover_data(temps)
+con.none <- lapply(con.data, conover.test)
+con.bonf <- lapply(con.data, conover.test, method = "bonferroni")
+con.holm <- lapply(con.data, conover.test, method = "holm")
+```
+
+```{r extracting_conover_results}
+extract <- function(string)
+{
+  match <- unlist(stringr::str_extract_all(string,"\\d+"))
+}
+make_matrix <- function(conover.result, matches)
+{
+  tmp_mat <- matrix(nrow = 3, ncol = 3)
+  # tmp_mat[,] <- 0
+  colnames(tmp_mat) <- as.character(1:3)
+  rownames(tmp_mat) <- as.character(2:4)
+  
+  for (i in 1:dim(matches)[2])
+  {
+    col_id <- matches[1,i]
+    row_id <- matches[2,i]
+    tmp_mat[row_id, col_id] <- conover.result$P.adjusted[i]
+  }
+  return(as.data.frame(tmp_mat))
+}
+
+make_matrix.list <- function(conover.result.list)
+{
+  test.cases <- conover.result.list[[1]]$comparisons
+  matches <- sapply(test.cases, extract)
+  conover_processed <- lapply(conover.result.list, make_matrix, matches)
+  return(conover_processed)
+}
+
+con.none.processed = make_matrix.list(con.none)
+con.bonf.processed = make_matrix.list(con.bonf)
+con.holm.processed = make_matrix.list(con.holm)
+```
+
+```{r conover comparison}
+conover.compare <- function(conover_processed, confidence = NULL)
+{
+  if (is.null(confidence)){confidence = 0.05/2}
+  conover.comparison <- list()
+  for (cl in names(conover_processed))
+  {
+    conover.comparison[[cl]] = conover_processed[[cl]] <= confidence
+  }
+  
+  # comparison_swap = conover.comparison[[1]]
+  # for (cl in names(conover_processed[-1]))
+  # {
+  #   comparison_swap = conover.comparison[[cl]] & comparison_swap
+  # }
+return(as.data.frame(conover.comparison))
+}
+con.none.compared <- conover.compare(con.none.processed)
+con.bonf.compared <- conover.compare(con.bonf.processed)
+con.holm.compared <- conover.compare(con.holm.processed)
+```
+
+```{r conover_effect_size}
+
+cliff.delta.for_conover <- function(temp_mat){
+  temp_mat <- temp_mat[sapply(temp_mat, is.numeric)] # remove non numeric columns
+  max_iter <- ncol(temp_mat)-1
+  temp_mat_out <- as.data.frame(matrix(nrow = max_iter, ncol = max_iter))
+  
+  row_names <- colnames(temp_mat)[-1]
+  column_names <- colnames(temp_mat)[-ncol(temp_mat)]
+  
+  rownames(temp_mat_out) <- row_names
+  colnames(temp_mat_out) <- column_names
+  
+  # this caused warnings "The samples are fully disjoint, using approximate Confidence Interval estimation"
+  # for some samples. Maybe it's a bad approach but makes it easier to look at
+  suppressWarnings({ 
+    for (i in 1:max_iter)
+    {
+      col_item_name <- column_names[i]
+      for (j in i:max_iter)
+      {
+        row_item_name <- row_names[j]
+        mag <- cliff.delta(temp_mat[,row_item_name], temp_mat[,col_item_name])$magnitude
+        temp_mat_out[j,i] <- as.character(mag)
+      }
+    }
+  })
+  return(temp_mat_out)
+}
+```
+
+```{r}
+library(effsize)
+temp_ <- matrix(nrow = 3, ncol = 3)
+rownames(temp_) <- names(con.data[[1]])[-1]
+colnames(temp_) <- names(con.data[[1]])[-length(con.data[[1]])]
+effect.sizes <- list()
+for (cl in names(con.data))
+{
+  var <- con.data[[cl]]
+  for (i in 1:(length(var)-1))
+  {
+    for (j in i:(length(var)-1))
+    {
+      temp_[j,i] = as.character(cliff.delta(var[[i]],var[[j]])$magnitude)
+    }
+  }
+  effect.sizes[[cl]] <- temp_
+}
+effect.sizes
 ```
 
