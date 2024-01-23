@@ -282,7 +282,7 @@ prepare_conover_data <- function(temps)
   data_for_conover <- list()
   for (col in colnames(temps[[1]])[sapply(temps[[1]], is.numeric)])
   {
-    temp_ = lapply(temps, "[[", 1)
+    temp_ = lapply(temps, "[[", col)
     names(temp_) <- c("Blood Donor", "Hepatitis", "Fibrosis", "Cirrhosis")
     data_for_conover[[col]] <- temp_
   }
@@ -350,36 +350,6 @@ con.bonf.compared <- conover.compare(con.bonf.processed)
 con.holm.compared <- conover.compare(con.holm.processed)
 ```
 
-```{r conover_effect_size}
-
-cliff.delta.for_conover <- function(temp_mat){
-  temp_mat <- temp_mat[sapply(temp_mat, is.numeric)] # remove non numeric columns
-  max_iter <- ncol(temp_mat)-1
-  temp_mat_out <- as.data.frame(matrix(nrow = max_iter, ncol = max_iter))
-  
-  row_names <- colnames(temp_mat)[-1]
-  column_names <- colnames(temp_mat)[-ncol(temp_mat)]
-  
-  rownames(temp_mat_out) <- row_names
-  colnames(temp_mat_out) <- column_names
-  
-  # this caused warnings "The samples are fully disjoint, using approximate Confidence Interval estimation"
-  # for some samples. Maybe it's a bad approach but makes it easier to look at
-  suppressWarnings({ 
-    for (i in 1:max_iter)
-    {
-      col_item_name <- column_names[i]
-      for (j in i:max_iter)
-      {
-        row_item_name <- row_names[j]
-        mag <- cliff.delta(temp_mat[,row_item_name], temp_mat[,col_item_name])$magnitude
-        temp_mat_out[j,i] <- as.character(mag)
-      }
-    }
-  })
-  return(temp_mat_out)
-}
-```
 
 ```{r}
 library(effsize)
