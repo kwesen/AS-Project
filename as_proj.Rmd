@@ -335,7 +335,7 @@ conover.compare <- function(conover_processed, confidence = NULL)
   conover.comparison <- list()
   for (cl in names(conover_processed))
   {
-    conover.comparison[[cl]] = conover_processed[[cl]] <= confidence
+    conover.comparison[[cl]] = as.data.frame(conover_processed[[cl]] <= confidence)
   }
   
   # comparison_swap = conover.comparison[[1]]
@@ -343,7 +343,7 @@ conover.compare <- function(conover_processed, confidence = NULL)
   # {
   #   comparison_swap = conover.comparison[[cl]] & comparison_swap
   # }
-return(as.data.frame(conover.comparison))
+return(conover.comparison)
 }
 con.none.compared <- conover.compare(con.none.processed)
 con.bonf.compared <- conover.compare(con.bonf.processed)
