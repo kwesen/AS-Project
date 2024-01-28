@@ -85,7 +85,11 @@ out_count
 bdescriptives <- list()
 for (cl in names(temps))
 {
-  bdescriptives[[cl]] <- summary(temps[[cl]][,-13])
+  swap = temps[[cl]][,-13]
+  sex_swap = as.factor(swap$Sex)
+  levels(sex_swap) = c("Female", "Male")
+  swap$Sex = sex_swap
+  bdescriptives[[cl]] <- summary(swap)
 }
 bdescriptives$cat <- summary(hcv)
 bdescriptives
@@ -367,8 +371,9 @@ for (cl in names(con.data))
       temp_[j,i] = as.character(cliff.delta(var[[i]],var[[j]])$magnitude)
     }
   }
-  effect.sizes[[cl]] <- temp_
+  effect.sizes[[cl]] <- as.data.frame(temp_)
 }
 effect.sizes
+cliff.delta(var[[i]],var[[j]])$magnitude
 ```
 
